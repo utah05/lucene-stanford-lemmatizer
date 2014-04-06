@@ -8,3 +8,7 @@ javadoc/
 # Vim temporaries
 *.swp
 *.swo
+/target
+.classpath
+.project
+.settings
