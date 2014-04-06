@@ -36,90 +36,102 @@ import edu.stanford.nlp.process.Morphology;
 import edu.stanford.nlp.tagger.maxent.MaxentTagger;
 
 /**
- * A tokenizer that retrieves the lemmas (base forms) of English words.
- * Relies internally on the sentence splitter and tokenizer supplied with
- * the Stanford POS tagger.
- *
+ * A tokenizer that retrieves the lemmas (base forms) of English words. Relies
+ * internally on the sentence splitter and tokenizer supplied with the Stanford
+ * POS tagger.
+ * 
  */
 public class EnglishLemmaTokenizer extends Tokenizer {
-    private Iterator<TaggedWord> tagged;
-    private PositionIncrementAttribute posIncr;
-    private TaggedWord currentWord;
-    private CharTermAttribute termAtt;
-    private boolean lemmaNext;
+	private Iterator<TaggedWord> tagged;
+	private PositionIncrementAttribute posIncr;
+	private TaggedWord currentWord;
+	private CharTermAttribute termAtt;
+	private boolean lemmaNext;
+	private MaxentTagger tagger;
 
-    /**
-     * Construct a tokenizer processing the given input and a tagger
-     * using the given model file.
-     */
-    public EnglishLemmaTokenizer(Reader input, String posModelFile)
-            throws Exception {
-        this(input, EnglishLemmaAnalyzer.makeTagger(posModelFile));
-    }
+	/**
+	 * Construct a tokenizer processing the given input and a tagger using the
+	 * given model file.
+	 */
+	public EnglishLemmaTokenizer(Reader input, String posModelFile)
+			throws Exception {
+		this(input, EnglishLemmaAnalyzer.makeTagger(posModelFile));
+	}
 
-    /**
-     * Construct a tokenizer processing the given input using the given tagger.
-     */
-    public EnglishLemmaTokenizer(Reader input, MaxentTagger tagger) {
-        super(input);
+	/**
+	 * Construct a tokenizer processing the given input using the given tagger.
+	 */
+	public EnglishLemmaTokenizer(Reader input, MaxentTagger tagger) {
+		super(input);
+		this.tagger = tagger;
 
-        lemmaNext = false;
-        posIncr = addAttribute(PositionIncrementAttribute.class);
-        termAtt = addAttribute(CharTermAttribute.class);
+		lemmaNext = false;
+		posIncr = addAttribute(PositionIncrementAttribute.class);
+		termAtt = addAttribute(CharTermAttribute.class);
 
-        List<List<HasWord>> tokenized =
-            MaxentTagger.tokenizeText(input);
-        tagged = Iterables.concat(tagger.process(tokenized)).iterator();
-    }
+		List<List<HasWord>> tokenized = MaxentTagger.tokenizeText(input);
+		tagged = Iterables.concat(tagger.process(tokenized)).iterator();
+	}
 
-    /**
-     * Consumers use this method to advance the stream to the next token.
-     * The token stream emits inflected forms and lemmas interleaved (form1,
-     * lemma1, form2, lemma2, etc.), giving lemmas and their inflected forms
-     * the same PositionAttribute.
-     */
-    @Override
-    public final boolean incrementToken() throws IOException {
-        if (lemmaNext) {
-            // Emit a lemma
-            posIncr.setPositionIncrement(1);
-            String tag  = currentWord.tag();
-            String form = currentWord.word();
-            termAtt.setEmpty().append(Morphology.stemStatic(form, tag).word());
-        } else {
-            // Emit inflected form, if not filtered out.
+	/**
+	 * Consumers use this method to advance the stream to the next token. The
+	 * token stream emits inflected forms and lemmas interleaved (form1, lemma1,
+	 * form2, lemma2, etc.), giving lemmas and their inflected forms the same
+	 * PositionAttribute.
+	 */
+	@Override
+	public final boolean incrementToken() throws IOException {
+		if (lemmaNext) {
+			// Emit a lemma
+			// 0 because the lemma will come in the same position
+			posIncr.setPositionIncrement(0);
+			String tag = currentWord.tag();
+			String form = currentWord.word();
+			String lemmaStatic = Morphology.lemmaStatic(form, tag, true);
+			termAtt.setEmpty().append(lemmaStatic);
+		} else {
+			// Emit inflected form, if not filtered out.
 
-            // 0 because the lemma will come in the same position
-            int increment = 0;
-            for (;;) {
-                if (!tagged.hasNext())
-                    return false;
-                currentWord = tagged.next();
-                if (!unwantedPOS(currentWord.tag()))
-                    break;
-                increment++;
-            }
+			int increment = 1;
+			for (;;) {
+				if (!tagged.hasNext())
+					return false;
+				currentWord = tagged.next();
+				if (!unwantedPOS(currentWord.tag())) {
+					increment = 1;
+					break;
+				}
+				increment++;
+			}
 
-            posIncr.setPositionIncrement(increment);
-            termAtt.setEmpty().append(currentWord.word());
-        }
+			posIncr.setPositionIncrement(increment);
+			termAtt.setEmpty().append(currentWord.word());
+		}
 
-        lemmaNext = !lemmaNext;
-        return true;
-    }
+		lemmaNext = !lemmaNext;
+		return true;
+	}
 
-    private static final Pattern unwantedPosRE = Pattern.compile(
-      "^(CC|DT|[LR]RB|MD|POS|PRP|UH|WDT|WP|WP\\$|WRB|\\$|\\#|\\.|\\,|:)$"
-    );
+	private static final Pattern unwantedPosRE = Pattern
+			.compile("^(CC|DT|[LR]RB|MD|POS|PRP|UH|WDT|WP|WP\\$|WRB|\\$|\\#|\\.|\\,|:)$");
 
-    /**
-     * Determines if words with a given POS tag should be omitted from the
-     * index. Defaults to filtering out punctuation and function words
-     * (pronouns, prepositions, "the", "a", etc.).
-     *
-     * @see <a href="http://www.ims.uni-stuttgart.de/projekte/CorpusWorkbench/CQP-HTMLDemo/PennTreebankTS.html">The Penn Treebank tag set</a> used by Stanford NLP
-     */
-    protected boolean unwantedPOS(String tag) {
-        return unwantedPosRE.matcher(tag).matches();
-    }
+	/**
+	 * Determines if words with a given POS tag should be omitted from the
+	 * index. Defaults to filtering out punctuation and function words
+	 * (pronouns, prepositions, "the", "a", etc.).
+	 * 
+	 * @see <a
+	 *      href="http://www.ims.uni-stuttgart.de/projekte/CorpusWorkbench/CQP-HTMLDemo/PennTreebankTS.html">The
+	 *      Penn Treebank tag set</a> used by Stanford NLP
+	 */
+	protected boolean unwantedPOS(String tag) {
+		return unwantedPosRE.matcher(tag).matches();
+	}
+
+	@Override
+	public void reset() throws IOException {
+		super.reset();
+		List<List<HasWord>> tokenized = MaxentTagger.tokenizeText(input);
+		tagged = Iterables.concat(tagger.process(tokenized)).iterator();
+	}
 }

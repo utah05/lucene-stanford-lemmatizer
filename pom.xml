@@ -28,6 +28,12 @@
 			<version>${stanford-corenlp.version}</version>
 		</dependency>
 		<dependency>
+			<groupId>edu.stanford.nlp</groupId>
+			<artifactId>stanford-corenlp</artifactId>
+			<version>${stanford-corenlp.version}</version>
+			<classifier>models</classifier>
+		</dependency>
+		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
 			<version>${guava.version}</version>
