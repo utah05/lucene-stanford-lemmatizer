@@ -18,31 +18,13 @@ Getting started
 ---------------
 Download this package and
 
-* [Lucene 3.x](http://lucene.apache.org/core/)
+* [Lucene 4.x](http://lucene.apache.org/core/)
 * [Stanford POS Tagger](http://nlp.stanford.edu/software/tagger.shtml)
-* [Ant](http://ant.apache.org/)
 * [Guava](http://code.google.com/p/guava-libraries/)
 
-Set your CLASSPATH to include the above, then issue `ant jar`.
+Set your CLASSPATH to include the above.
 
 In your search code, construct an EnglishLemmaAnalyzer instead of a
 StandardAnalyzer (or whatever you normally use). Pass the filename of a
 Stanford POS Tagger model file to the constructor (found in the `models/`
 directory in the Stanford POS Tagger source directory.
-
-Going further
--------------
-It is possible to determine which parts-of-speech should be indexed by
-subclassing the tokenizer. See the
-[API docs](http://larsmans.github.com/lucene-stanford-lemmatizer)
-for details.
-
-Bugs
-----
-Lucene 4.x support is missing. Please don't email me (Lars) about this;
-I don't have the time to learn the new APIs and fix it.
-If you know a fix, please fork this project and publish your changes.
-
-The implementation is limited to English, because the Stanford lemmatizer
-only handles that languages. The POS tagger does Chinese and German, so it
-should be possible to add those languages.
